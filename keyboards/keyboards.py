@@ -11,6 +11,9 @@ yatut_button_4 = KeyboardButton(text=LEXICON_RU['month'])
 # Создаем клавиатуру функций
 yatut_kb = ReplyKeyboardMarkup(
     keyboard=[[yatut_button_1],
-              [yatut_button_2]],
+              [yatut_button_2],
+              [yatut_button_3],
+              [yatut_button_4]
+              ],
     resize_keyboard=True
 )
