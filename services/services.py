@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 def start_record():
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -18,7 +18,7 @@ def start_record():
 
 # Функция для записи прихода в базу данных
 def record_arrival(user_id):
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Записываем время прихода
@@ -32,7 +32,7 @@ def record_arrival(user_id):
 
 # Функция для записи ухода в базу данных
 def record_departure(user_id):
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Обновляем время ухода для последней записи времени прихода
@@ -47,7 +47,7 @@ def record_departure(user_id):
 
 # Функция для получения статистики за последние N дней
 def get_stats(user_id, days):
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Рассчитываем дату, начиная с которой нужно брать данные
@@ -113,7 +113,7 @@ def record_manual_hours(user_id):
 
     # Функция для удаления всех записей пользователя
 def clear_user_stats(user_id):
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Удаляем все записи из таблицы attendance для данного пользователя
