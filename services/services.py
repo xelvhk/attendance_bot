@@ -45,76 +45,27 @@ def record_departure(user_id):
     conn.commit()
     conn.close()
 
-def get_current_workweek():
-    today = datetime.now()
-    # Начало недели (понедельник)
-    start_of_week = today - timedelta(days=today.weekday())  # .weekday() возвращает 0 для понедельника
-    # Конец недели (пятница)
-    end_of_week = start_of_week + timedelta(days=4)
-    return start_of_week, end_of_week
-
-def get_current_month():
-    today = datetime.now()
-    # Первый день текущего месяца
-    start_of_month = today.replace(day=1)
-    # Последний день текущего месяца
-    if today.month == 12:  # Если декабрь
-        end_of_month = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
-    else:
-        end_of_month = today.replace(month=today.month + 1, day=1) - timedelta(days=1)
-    return start_of_month, end_of_month
-
-# Получаем статистику за текущую рабочую неделю
-def get_week_stats(user_id):
-    conn = sqlite3.connect('attendance.db')
-    cursor = conn.cursor()
-    start_of_week, end_of_week = get_current_workweek()
-    cursor.execute('''
-        SELECT arrival_time, departure_time 
-        FROM attendance
-        WHERE user_id = ? AND arrival_time >= ? AND arrival_time <= ?
-        ORDER BY arrival_time
-    ''', (user_id, start_of_week.strftime('%Y-%m-%d %H:%M:%S'), end_of_week.strftime('%Y-%m-%d %H:%M:%S')))
-    records = cursor.fetchall()
-    conn.close()
-    return records
-
-# Получаем статистику за текущий календарный месяц
-def get_month_stats(user_id):
-    conn = sqlite3.connect('attendance.db')
-    cursor = conn.cursor()
-    start_of_month, end_of_month = get_current_month()
-    cursor.execute('''
-        SELECT arrival_time, departure_time 
-        FROM attendance
-        WHERE user_id = ? AND arrival_time >= ? AND arrival_time <= ?
-        ORDER BY arrival_time
-    ''', (user_id, start_of_month.strftime('%Y-%m-%d %H:%M:%S'), end_of_month.strftime('%Y-%m-%d %H:%M:%S')))
-    records = cursor.fetchall()
-    conn.close()
-    return records
-
-
 # Функция для получения статистики за последние N дней
-# def get_stats(user_id, days):
-#     conn = sqlite3.connect('attendance.db')
-#     cursor = conn.cursor()
+def get_stats(user_id, days):
+    conn = sqlite3.connect('attendance.db')
+    cursor = conn.cursor()
 
-#     # Рассчитываем дату, начиная с которой нужно брать данные
-#     start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+    # Рассчитываем дату, начиная с которой нужно брать данные
+    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
 
-#     # SQL-запрос для получения записей за последние N дней
-#     cursor.execute('''
-#         SELECT arrival_time, departure_time 
-#         FROM attendance
-#         WHERE user_id = ? AND arrival_time >= ?
-#         ORDER BY arrival_time
-#     ''', (user_id, start_date))
+    # SQL-запрос для получения записей за последние N дней
+    cursor.execute('''
+        SELECT arrival_time, departure_time 
+        FROM attendance
+        WHERE user_id = ? AND arrival_time >= ?
+        ORDER BY arrival_time
+    ''', (user_id, start_date))
 
-#     records = cursor.fetchall()
-#     conn.close()
+    records = cursor.fetchall()
+    conn.close()
 
-#     return records
+    return records
+
 
 # Функция для форматирования статистики с расчетом разницы во времени
 def format_stats(records):
