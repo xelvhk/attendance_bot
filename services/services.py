@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
-
+import random
 def start_record():
     conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
@@ -121,3 +121,6 @@ def clear_user_stats(user_id):
     
     conn.commit()
     conn.close()
+
+def get_random_sticker(sticker_list):
+    return random.choice(sticker_list)
