@@ -5,10 +5,10 @@ This bot is under construction. Here’s what it can do:
 
 - Record arrival and departure time to DB:  
 - Show statistics for a week and a month
-- Send a sticker
+- Send a random sticker
     
 ### Things to do:
-- Add random stickers
+- Add some other statuses for a non-working days, vacation
 
 ### Requirements
 For installing requirements: `pip install -r requirements.txt`
