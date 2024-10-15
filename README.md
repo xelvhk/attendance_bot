@@ -3,7 +3,7 @@
 
 This bot is under construction. Here’s what it can do:
 
-- Record arrival and departure time to DB.
+- Record arrival and departure time to DB
 - Show statistics for a week and a month
 - Send a random sticker
     
