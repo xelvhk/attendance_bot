@@ -10,6 +10,7 @@ This bot is under construction. Here’s what it can do:
 ### Things to do:
 - Add some other statuses for a non-working days, vacation
 - Ability to add a description to the status
+- Calculation of total working time
 
 ### Requirements
 For installing requirements: `pip install -r requirements.txt`
