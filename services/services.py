@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime, timedelta
 import random
+
 def start_record():
     conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
@@ -94,7 +95,7 @@ def format_stats(records):
 
 # Функция для записи 8.5 часов рабочего дня в базу данных
 def record_manual_hours(user_id):
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Текущее время для прихода
@@ -124,3 +125,25 @@ def clear_user_stats(user_id):
 
 def get_random_sticker(sticker_list):
     return random.choice(sticker_list)
+
+def add_manual_entry(user_id, date_str, arrival_str, departure_str):
+    # Парсим дату и время
+    try:
+        arrival_time = datetime.strptime(f"{date_str} {arrival_str}", "%Y-%m-%d %H:%M:%S")
+        departure_time = datetime.strptime(f"{date_str} {departure_str}", "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return "Неверный формат даты или времени. Используйте формат: Y-m-d H:M:S"
+    
+    # Добавляем запись в базу данных
+    conn = sqlite3.connect('/data/attendance.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO attendance (user_id, arrival_time, departure_time)
+        VALUES (?, ?, ?)
+    ''', (user_id, arrival_time.strftime('%Y-%m-%d %H:%M:%S'), departure_time.strftime('%Y-%m-%d %H:%M:%S')))
+
+    conn.commit()
+    conn.close()
+ 
+    return "Запись успешно добавлена!"
+ 

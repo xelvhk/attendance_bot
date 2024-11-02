@@ -1,9 +1,10 @@
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
+import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
-from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, clear_user_stats, get_random_sticker
+from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, clear_user_stats, get_random_sticker, add_manual_entry
 
 router = Router()
 bot = Bot
@@ -95,4 +96,24 @@ async def clear_stats(message: Message):
 # Обработчик для КНОПОЧКИ
 @router.message(F.text.in_([LEXICON_RU['knop']]))
 async def clear_stats(message: Message):
-    await message.reply("Хуёбочка! Нажми на кнопульку, а не напиши, идиот!")
+    await message.reply("Не пишем, а жмём")
+
+pattern = r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})-(\d{2}:\d{2}:\d{2})"
+@router.message(lambda message: re.match(pattern, message.text))
+async def handle_manual_entry(message: Message):
+    user_id = message.from_user.id
+    match = re.match(pattern, message.text)
+ 
+    if match:
+        date_str = match.group(1)         # "дд.мм"
+        arrival_str = match.group(2)      # "чч:мм"
+        departure_str = match.group(3)    # "чч:мм"
+ 
+        response = add_manual_entry(user_id, date_str, arrival_str, departure_str)
+        await message.reply(response)
+    else:
+        await message.reply("Неверный формат. Используйте формат: дд.мм чч:мм-чч:мм")
+
+@router.message(F.text.in_([LEXICON_RU['print']]))
+async def clear_stats(message: Message):
+    await message.reply("Просто отправь мне сейчас в ответ предполагаемые дату и время в формате 2024-12-31 23:58:00-23:59:00")

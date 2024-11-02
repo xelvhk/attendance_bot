@@ -7,3 +7,6 @@ venv/
 __pycache__/
 attendance.db
 data/
+node_modules/
+package.json
+package-lock.json
