@@ -2,8 +2,10 @@ import sqlite3
 from datetime import datetime, timedelta
 import random
 
+WORKDAY_DURATION_MINUTES = 8 * 60 + 30  # 510 минут
+
 def start_record():
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -19,7 +21,7 @@ def start_record():
 
 # Функция для записи прихода в базу данных
 def record_arrival(user_id):
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     # Записываем время прихода
@@ -33,7 +35,7 @@ def record_arrival(user_id):
 
 # Функция для записи ухода в базу данных
 def record_departure(user_id):
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     # Обновляем время ухода для последней записи времени прихода
@@ -48,7 +50,7 @@ def record_departure(user_id):
 
 # Функция для получения статистики за последние N дней
 def get_stats(user_id, days):
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     # Рассчитываем дату, начиная с которой нужно брать данные
@@ -95,7 +97,7 @@ def format_stats(records):
 
 # Функция для записи 8.5 часов рабочего дня в базу данных
 def record_manual_hours(user_id):
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     # Текущее время для прихода
@@ -114,7 +116,7 @@ def record_manual_hours(user_id):
 
     # Функция для удаления всех записей пользователя
 def clear_user_stats(user_id):
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
 
     # Удаляем все записи из таблицы attendance для данного пользователя
@@ -135,7 +137,7 @@ def add_manual_entry(user_id, date_str, arrival_str, departure_str):
         return "Неверный формат даты или времени. Используйте формат: Y-m-d H:M:S"
     
     # Добавляем запись в базу данных
-    conn = sqlite3.connect('/data/attendance.db')
+    conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO attendance (user_id, arrival_time, departure_time)
@@ -147,3 +149,44 @@ def add_manual_entry(user_id, date_str, arrival_str, departure_str):
  
     return "Запись успешно добавлена!"
  
+def get_monthly_records(user_id):
+    conn = sqlite3.connect('data/attendance.db')
+    cursor = conn.cursor()
+    
+    # Определяем начало и конец текущего месяца
+    now = datetime.now()
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+    
+    # Получаем записи о приходе и уходе за текущий месяц
+    cursor.execute('''
+        SELECT arrival_time, departure_time FROM attendance
+        WHERE user_id = ? AND
+              arrival_time BETWEEN ? AND ? AND
+              departure_time IS NOT NULL
+    ''', (user_id, start_of_month, end_of_month))
+    
+    records = cursor.fetchall()
+    conn.close()
+    return records
+def calculate_monthly_balance(user_id):
+    records = get_monthly_records(user_id)
+    total_minutes = 0  # Суммарное количество отработанных минут
+    
+    for arrival_str, departure_str in records:
+        arrival_time = datetime.strptime(arrival_str, '%Y-%m-%d %H:%M:%S')
+        departure_time = datetime.strptime(departure_str, '%Y-%m-%d %H:%M:%S')
+        
+        # Вычисляем количество минут, отработанных за день
+        work_duration = (departure_time - arrival_time).total_seconds() / 60  # в минутах
+        total_minutes += work_duration - WORKDAY_DURATION_MINUTES  # Разница с нормой
+    
+    # Переводим минуты в часы и минуты
+    hours, minutes = divmod(int(total_minutes), 60)
+    
+    if total_minutes > 0:
+        return f"Переработка в этом месяце: {hours} часов {minutes} минут"
+    elif total_minutes < 0:
+        return f"Недоработка в этом месяце: {abs(hours)} часов {abs(minutes)} минут"
+    else:
+        return "Все отработано в точности по графику!"

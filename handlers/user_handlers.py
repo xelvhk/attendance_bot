@@ -4,7 +4,7 @@ from aiogram.types import Message
 import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
-from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, clear_user_stats, get_random_sticker, add_manual_entry
+from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, clear_user_stats, get_random_sticker, add_manual_entry, calculate_monthly_balance
 
 router = Router()
 bot = Bot
@@ -117,3 +117,9 @@ async def handle_manual_entry(message: Message):
 @router.message(F.text.in_([LEXICON_RU['print']]))
 async def clear_stats(message: Message):
     await message.reply("Просто отправь мне сейчас в ответ предполагаемые дату и время в формате 2024-12-31 23:58:00-23:59:00")
+
+@router.message(F.text.in_([LEXICON_RU['check_time']]))
+async def handle_time_balance(message: Message):
+    user_id = message.from_user.id
+    balance = calculate_monthly_balance(user_id)
+    await message.reply(balance)
