@@ -1,10 +1,12 @@
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
+from datetime import datetime
+import sqlite3
 import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
-from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, clear_user_stats, get_random_sticker, add_manual_entry, calculate_monthly_balance
+from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, get_random_sticker, add_manual_entry, calculate_monthly_balance,reload_table
 
 router = Router()
 bot = Bot
@@ -86,16 +88,39 @@ async def month_stats(message: Message):
     response = format_stats(records)
     await message.reply(response)
 
-# Обработчик для кнопки "Стереть статистику"
-@router.message(F.text.in_([LEXICON_RU['clear_stats']]))
-async def clear_stats(message: Message):
+del_date = r"^\d{2}\.\d{2}$"
+@router.message(lambda message: re.match(del_date, message.text))
+async def delete_records_for_day(message: Message):
     user_id = message.from_user.id
-    clear_user_stats(user_id)  # Вызываем функцию очистки данных
-    await message.reply("Ваша статистика успешно стерта.")
+    date_str = message.text  # Получаем дату в формате дд.мм
+
+    try:
+        # Преобразуем дату в объект datetime
+        date_obj = datetime.strptime(date_str, "%d.%m").date()
+
+        # Удаляем записи за указанную дату
+        conn = sqlite3.connect('data/attendance.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            DELETE FROM attendance
+            WHERE user_id = ? AND arrival_date = ?
+        ''', (user_id, date_obj))
+        
+        deleted_rows = cursor.rowcount  # Сколько записей было удалено
+        conn.commit()
+        conn.close()
+
+        if deleted_rows > 0:
+            await message.reply(f"Удалено {deleted_rows} записей за {date_str}.")
+        else:
+            await message.reply(f"Записей за {date_str} не найдено.")
+    except ValueError:
+        await message.reply("Неверный формат даты. Пожалуйста, используйте формат дд.мм.")
 
 # Обработчик для КНОПОЧКИ
 @router.message(F.text.in_([LEXICON_RU['knop']]))
-async def clear_stats(message: Message):
+async def just_pull(message: Message):
     await message.reply("Не пишем, а жмём")
 
 pattern = r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})-(\d{2}:\d{2}:\d{2})"
@@ -115,7 +140,7 @@ async def handle_manual_entry(message: Message):
         await message.reply("Неверный формат. Используйте формат: дд.мм чч:мм-чч:мм")
 
 @router.message(F.text.in_([LEXICON_RU['print']]))
-async def clear_stats(message: Message):
+async def add_manual_stats(message: Message):
     await message.reply("Просто отправь мне сейчас в ответ предполагаемые дату и время в формате 2024-12-31 23:58:00-23:59:00")
 
 @router.message(F.text.in_([LEXICON_RU['check_time']]))
@@ -123,3 +148,12 @@ async def handle_time_balance(message: Message):
     user_id = message.from_user.id
     balance = calculate_monthly_balance(user_id)
     await message.reply(balance)
+
+@router.message(F.text.in_([LEXICON_RU['reload']]))
+async def manual_hours(message: Message):
+    reload_table()
+    await message.reply("База обновлена")
+
+@router.message(F.text.in_([LEXICON_RU['clear_stats']]))
+async def del_manual_stats(message: Message):
+    await message.reply("Укажи день и месяц через точку, чтобы стереть день из памяти")

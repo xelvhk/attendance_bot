@@ -114,20 +114,11 @@ def record_manual_hours(user_id):
     conn.commit()
     conn.close()
 
-    # Функция для удаления всех записей пользователя
-def clear_user_stats(user_id):
-    conn = sqlite3.connect('data/attendance.db')
-    cursor = conn.cursor()
-
-    # Удаляем все записи из таблицы attendance для данного пользователя
-    cursor.execute('DELETE FROM attendance WHERE user_id = ?', (user_id,))
-    
-    conn.commit()
-    conn.close()
 
 def get_random_sticker(sticker_list):
     return random.choice(sticker_list)
 
+# Обработка добавления записи вручную
 def add_manual_entry(user_id, date_str, arrival_str, departure_str):
     # Парсим дату и время
     try:
@@ -135,19 +126,41 @@ def add_manual_entry(user_id, date_str, arrival_str, departure_str):
         departure_time = datetime.strptime(f"{date_str} {departure_str}", "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return "Неверный формат даты или времени. Используйте формат: Y-m-d H:M:S"
-    
+    # Определяем дату без времени
+    arrival_date = arrival_time.date()
     # Добавляем запись в базу данных
     conn = sqlite3.connect('data/attendance.db')
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO attendance (user_id, arrival_time, departure_time)
-        VALUES (?, ?, ?)
-    ''', (user_id, arrival_time.strftime('%Y-%m-%d %H:%M:%S'), departure_time.strftime('%Y-%m-%d %H:%M:%S')))
-
-    conn.commit()
-    conn.close()
- 
-    return "Запись успешно добавлена!"
+        SELECT id FROM attendance
+        WHERE user_id = ? AND arrival_date = ?
+    ''', (user_id, arrival_date))
+    existing_record = cursor.fetchone()
+    
+    if existing_record:
+        # Обновляем запись
+        cursor.execute('''
+            UPDATE attendance
+            SET arrival_time = ?, departure_time = ?
+            WHERE id = ?
+        ''', (arrival_time.strftime('%Y-%m-%d %H:%M:%S'),
+              departure_time.strftime('%Y-%m-%d %H:%M:%S'),
+              existing_record[0]))
+        conn.commit()
+        conn.close()
+        return "Запись обновлена!"
+    else:
+        # Добавляем новую запись
+        cursor.execute('''
+            INSERT INTO attendance (user_id, arrival_time, departure_time, arrival_date)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id,
+              arrival_time.strftime('%Y-%m-%d %H:%M:%S'),
+              departure_time.strftime('%Y-%m-%d %H:%M:%S'),
+              arrival_date))
+        conn.commit()
+        conn.close()
+        return "Запись успешно добавлена!"
  
 def get_monthly_records(user_id):
     conn = sqlite3.connect('data/attendance.db')
@@ -190,3 +203,11 @@ def calculate_monthly_balance(user_id):
         return f"Недоработка в этом месяце: {abs(hours)} часов {abs(minutes)} минут"
     else:
         return "Все отработано в точности по графику!"
+    
+def reload_table():
+   conn = sqlite3.connect('data/attendance.db')
+   cursor = conn.cursor()
+   cursor.execute(''' UPDATE attendance SET arrival_date = DATE(arrival_time)''')
+   conn.commit()
+   conn.close()
+   return "База обновлена!"
