@@ -8,6 +8,7 @@ This bot is under construction. Here’s what it can do:
 - Parsing date and time of arrival and departure from text of messages
 - Send a random sticker
 - Calculation of total working time
+- Delete statistics for a specific day
     
 ### Things to do:
 - Add some other statuses for a non-working days, vacation
