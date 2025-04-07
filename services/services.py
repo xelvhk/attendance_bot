@@ -204,10 +204,3 @@ def calculate_monthly_balance(user_id):
     else:
         return "Все отработано в точности по графику!"
     
-def reload_table():
-   conn = sqlite3.connect('data/attendance.db')
-   cursor = conn.cursor()
-   cursor.execute(''' UPDATE attendance SET arrival_date = DATE(arrival_time)''')
-   conn.commit()
-   conn.close()
-   return "База обновлена!"

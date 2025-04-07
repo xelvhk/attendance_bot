@@ -6,7 +6,8 @@ import sqlite3
 import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
-from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, get_random_sticker, add_manual_entry, calculate_monthly_balance,reload_table
+from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, get_random_sticker, add_manual_entry, calculate_monthly_balance
+from datetime import timedelta
 
 router = Router()
 bot = Bot
@@ -88,36 +89,6 @@ async def month_stats(message: Message):
     response = format_stats(records)
     await message.reply(response)
 
-del_date = r"^\d{2}\.\d{2}$"
-@router.message(lambda message: re.match(del_date, message.text))
-async def delete_records_for_day(message: Message):
-    user_id = message.from_user.id
-    date_str = message.text  # Получаем дату в формате дд.мм
-
-    try:
-        # Преобразуем дату в объект datetime
-        date_obj = datetime.strptime(date_str, "%d.%m").date()
-
-        # Удаляем записи за указанную дату
-        conn = sqlite3.connect('data/attendance.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            DELETE FROM attendance
-            WHERE user_id = ? AND arrival_date = ?
-        ''', (user_id, date_obj))
-        
-        deleted_rows = cursor.rowcount  # Сколько записей было удалено
-        conn.commit()
-        conn.close()
-
-        if deleted_rows > 0:
-            await message.reply(f"Удалено {deleted_rows} записей за {date_str}.")
-        else:
-            await message.reply(f"Записей за {date_str} не найдено.")
-    except ValueError:
-        await message.reply("Неверный формат даты. Пожалуйста, используйте формат дд.мм.")
-
 # Обработчик для КНОПОЧКИ
 @router.message(F.text.in_([LEXICON_RU['knop']]))
 async def just_pull(message: Message):
@@ -149,11 +120,41 @@ async def handle_time_balance(message: Message):
     balance = calculate_monthly_balance(user_id)
     await message.reply(balance)
 
-@router.message(F.text.in_([LEXICON_RU['reload']]))
-async def manual_hours(message: Message):
-    reload_table()
-    await message.reply("База обновлена")
+@router.message(F.text.in_([LEXICON_RU['all_records']]))
+async def show_full_statistics(message: Message):
+    user_id = message.from_user.id
+    conn = sqlite3.connect('data/attendance.db')
+    cursor = conn.cursor()
 
-@router.message(F.text.in_([LEXICON_RU['clear_stats']]))
-async def del_manual_stats(message: Message):
-    await message.reply("Укажи день и месяц через точку, чтобы стереть день из памяти")
+    cursor.execute('''
+        SELECT arrival_time, departure_time
+        FROM attendance
+        WHERE user_id = ?
+        ORDER BY arrival_time
+    ''', (user_id,))
+    
+    records = cursor.fetchall()
+    conn.close()
+
+    if not records:
+        await message.reply("Нет записей для отображения.")
+        return
+
+    msg = "Вся статистика:\n\n"
+    total_duration = timedelta()
+
+    for arrival_str, departure_str in records:
+        arrival_time = datetime.strptime(arrival_str, "%Y-%m-%d %H:%M:%S")
+        departure_time = datetime.strptime(departure_str, "%Y-%m-%d %H:%M:%S")
+        duration = departure_time - arrival_time
+        total_duration += duration
+        date_str = arrival_time.strftime("%d.%m.%Y")
+        msg += f"{date_str}: {arrival_time.strftime('%H:%M')} – {departure_time.strftime('%H:%M')} | {str(duration)[:-3]}\n"
+
+    hours = total_duration.total_seconds() // 3600
+    minutes = (total_duration.total_seconds() % 3600) // 60
+    msg += f"\nОбщее отработанное время: {int(hours)} ч {int(minutes)} мин"
+    
+    # Чтобы не превысить лимит сообщений Telegram
+    for chunk in [msg[i:i+4096] for i in range(0, len(msg), 4096)]:
+        await message.reply(chunk)
