@@ -5,7 +5,7 @@ import random
 WORKDAY_DURATION_MINUTES = 8 * 60 + 30  # 510 минут
 
 def start_record():
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -21,7 +21,7 @@ def start_record():
 
 # Функция для записи прихода в базу данных
 def record_arrival(user_id):
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Записываем время прихода
@@ -35,7 +35,7 @@ def record_arrival(user_id):
 
 # Функция для записи ухода в базу данных
 def record_departure(user_id):
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Обновляем время ухода для последней записи времени прихода
@@ -50,7 +50,7 @@ def record_departure(user_id):
 
 # Функция для получения статистики за последние N дней
 def get_stats(user_id, days):
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Рассчитываем дату, начиная с которой нужно брать данные
@@ -97,7 +97,7 @@ def format_stats(records):
 
 # Функция для записи 8.5 часов рабочего дня в базу данных
 def record_manual_hours(user_id):
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
 
     # Текущее время для прихода
@@ -127,14 +127,13 @@ def add_manual_entry(user_id, date_str, arrival_str, departure_str):
     except ValueError:
         return "Неверный формат даты или времени. Используйте формат: Y-m-d H:M:S"
     # Определяем дату без времени
-    arrival_date = arrival_time.date()
     # Добавляем запись в базу данных
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
     cursor.execute('''
         SELECT id FROM attendance
-        WHERE user_id = ? AND arrival_date = ?
-    ''', (user_id, arrival_date))
+        WHERE user_id = ? AND arrival_time = ?
+    ''', (user_id, arrival_time))
     existing_record = cursor.fetchone()
     
     if existing_record:
@@ -152,18 +151,17 @@ def add_manual_entry(user_id, date_str, arrival_str, departure_str):
     else:
         # Добавляем новую запись
         cursor.execute('''
-            INSERT INTO attendance (user_id, arrival_time, departure_time, arrival_date)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO attendance (user_id, arrival_time, departure_time)
+            VALUES (?, ?, ?)
         ''', (user_id,
               arrival_time.strftime('%Y-%m-%d %H:%M:%S'),
-              departure_time.strftime('%Y-%m-%d %H:%M:%S'),
-              arrival_date))
+              departure_time.strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
         conn.close()
         return "Запись успешно добавлена!"
  
 def get_monthly_records(user_id):
-    conn = sqlite3.connect('data/attendance.db')
+    conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
     
     # Определяем начало и конец текущего месяца
