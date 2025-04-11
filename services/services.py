@@ -1,9 +1,9 @@
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 import random
 
 WORKDAY_DURATION_MINUTES = 8 * 60 + 30  # 510 минут
-
+SPB = timezone(timedelta(hours=3))
 def start_record():
     conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
@@ -28,7 +28,7 @@ def record_arrival(user_id):
     cursor.execute('''
         INSERT INTO attendance (user_id, arrival_time)
         VALUES (?, ?)
-    ''', (user_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    ''', (user_id, datetime.now(SPB).strftime('%Y-%m-%d %H:%M:%S')))
 
     conn.commit()
     conn.close()
@@ -43,7 +43,7 @@ def record_departure(user_id):
         UPDATE attendance
         SET departure_time = ?
         WHERE user_id = ? AND departure_time IS NULL
-    ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), user_id))
+    ''', (datetime.now(SPB).strftime('%Y-%m-%d %H:%M:%S'), user_id))
 
     conn.commit()
     conn.close()
@@ -54,7 +54,7 @@ def get_stats(user_id, days):
     cursor = conn.cursor()
 
     # Рассчитываем дату, начиная с которой нужно брать данные
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+    start_date = (datetime.now(SPB) - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
 
     # SQL-запрос для получения записей за последние N дней
     cursor.execute('''
@@ -101,7 +101,7 @@ def record_manual_hours(user_id):
     cursor = conn.cursor()
 
     # Текущее время для прихода
-    arrival_time = datetime.now()
+    arrival_time = datetime.now(SPB)
     # Рассчитываем фиксированное время ухода (через 8.5 часов после прихода)
     departure_time = arrival_time + timedelta(hours=8, minutes=30)
 
@@ -165,7 +165,7 @@ def get_monthly_records(user_id):
     cursor = conn.cursor()
     
     # Определяем начало и конец текущего месяца
-    now = datetime.now()
+    now = datetime.now(SPB)
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
     

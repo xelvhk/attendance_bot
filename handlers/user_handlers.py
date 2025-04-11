@@ -8,10 +8,10 @@ from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
 from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, get_random_sticker, add_manual_entry, calculate_monthly_balance
 from datetime import timedelta
-
+from collections import defaultdict
 router = Router()
 bot = Bot
-
+SPB = timedelta(hours=3)
 # ID стикеров
 STICKER_ARRIVED = ['CAACAgIAAxkBAAEI3cFm-wxyyOtvqI94tfrsref6_vwaFQACgQADBL0eGX0AATUSNQ505jYE',
                    'CAACAgIAAxkBAAEI3b9m-wwZr8UwSWMVmiBBLc8UMcOOeAACUQADaJpdDO_0j_QyLokTNgQ',
@@ -123,38 +123,54 @@ async def handle_time_balance(message: Message):
 @router.message(F.text.in_([LEXICON_RU['all_records']]))
 async def show_full_statistics(message: Message):
     user_id = message.from_user.id
-    conn = sqlite3.connect('data/attendance.db')
+
+    conn = sqlite3.connect("/data/attendance.db")
     cursor = conn.cursor()
 
-    cursor.execute('''
+    cursor.execute("""
         SELECT arrival_time, departure_time
         FROM attendance
         WHERE user_id = ?
         ORDER BY arrival_time
-    ''', (user_id,))
-    
-    records = cursor.fetchall()
+    """, (user_id,))
+    data = cursor.fetchall()
     conn.close()
 
-    if not records:
-        await message.reply("Нет записей для отображения.")
+    if not data:
+        await message.answer("Нет данных.")
         return
 
-    msg = "Вся статистика:\n\n"
-    total_duration = timedelta()
+    monthly_data = defaultdict(list)
 
-    for arrival_str, departure_str in records:
-        arrival_time = datetime.strptime(arrival_str, "%Y-%m-%d %H:%M:%S")
-        departure_time = datetime.strptime(departure_str, "%Y-%m-%d %H:%M:%S")
-        duration = departure_time - arrival_time
-        total_duration += duration
-        date_str = arrival_time.strftime("%d.%m.%Y")
-        msg += f"{date_str}: {arrival_time.strftime('%H:%M')} – {departure_time.strftime('%H:%M')} | {str(duration)[:-3]}\n"
+    for arrival_str, departure_str in data:
+        # Преобразуем строки в datetime с учетом UTC+3
+        arrival = datetime.fromisoformat(arrival_str) + SPB
+        departure = datetime.fromisoformat(departure_str) + SPB
+        month_key = arrival.strftime("%B %Y")
+        worked_time = departure - arrival
+        monthly_data[month_key].append((arrival.date(), worked_time))
 
-    hours = total_duration.total_seconds() // 3600
-    minutes = (total_duration.total_seconds() % 3600) // 60
-    msg += f"\nОбщее отработанное время: {int(hours)} ч {int(minutes)} мин"
-    
-    # Чтобы не превысить лимит сообщений Telegram
-    for chunk in [msg[i:i+4096] for i in range(0, len(msg), 4096)]:
-        await message.reply(chunk)
+    result = ""
+    for month, records in monthly_data.items():
+        result += f"\n<b>{month}</b>\n"
+        total_time = timedelta()
+        days_set = set()
+
+        for day, worked in records:
+            result += f"{day.strftime('%d.%m.%Y')}: {str(worked)}\n"
+            total_time += worked
+            days_set.add(day)
+
+        expected_time = timedelta(hours=8, minutes=30) * len(days_set)
+        delta = total_time - expected_time
+
+        if delta.total_seconds() > 0:
+            diff_str = f"✅ Переработка: {str(delta)}"
+        elif delta.total_seconds() == 0:
+            diff_str = f"✅ Всё нормально"
+        else:
+            diff_str = f"⚠️ Недоработка: {str(-delta)}"
+
+        result += f"<b>Всего: {str(total_time)} — {diff_str}</b>\n"
+
+    await message.answer(result, parse_mode='HTML')
