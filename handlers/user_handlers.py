@@ -74,6 +74,36 @@ async def manual_hours(message: Message):
     await message.reply("Записаны фиксированные 8.5 часов рабочего дня.")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
 
+# Обработчик нажатия на кнопку "УВЦ"
+@router.message(F.text.in_([LEXICON_RU['answers']['uvc']]))
+async def manual_hours(message: Message):
+    await message.reply("Целый день без работы, ух!")
+    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
+# Обработчик нажатия на кнопку "УВC"
+@router.message(F.text.in_([LEXICON_RU['answers']['uvs']]))
+async def manual_hours(message: Message):
+    await message.reply("Расскажи, сколько часов тебя не будет")
+    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
+# Обработчик нажатия на кнопку "За свой счёт"
+@router.message(F.text.in_([LEXICON_RU['answers']['one_day']]))
+async def manual_hours(message: Message):
+    await message.reply("Минус зарплата")
+    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
+# Обработчик нажатия на кнопку "Короткий день"
+@router.message(F.text.in_([LEXICON_RU['answers']['short_day']]))
+async def manual_hours(message: Message):
+    await message.reply("Сколько часов сегодня не работаем?")
+    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
+# Обработчик нажатия на кнопку "Отпуск"
+@router.message(F.text.in_([LEXICON_RU['answers']['holidays']]))
+async def manual_hours(message: Message):
+    await message.reply("Ура! Отпуск!")
+    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
 @router.message(F.text.in_([LEXICON_RU['week']]))
 async def week_stats(message: Message):
     user_id = message.from_user.id
@@ -143,9 +173,15 @@ async def show_full_statistics(message: Message):
     monthly_data = defaultdict(list)
 
     for arrival_str, departure_str in data:
-        # Преобразуем строки в datetime с учетом UTC+3
-        arrival = datetime.fromisoformat(arrival_str) + SPB
-        departure = datetime.fromisoformat(departure_str) + SPB
+        if arrival_str is None or departure_str is None:
+            continue #пропускаем неполные записи
+        try:
+            # Преобразуем строки в datetime с учетом UTC+3
+            arrival = datetime.fromisoformat(arrival_str) + SPB
+            departure = datetime.fromisoformat(departure_str) + SPB
+        except Exception as e:
+            print(f"Ошибка при обработке строки: {e}, потому что день ещё не закрыт")
+            continue
         month_key = arrival.strftime("%B %Y")
         worked_time = departure - arrival
         monthly_data[month_key].append((arrival.date(), worked_time))
