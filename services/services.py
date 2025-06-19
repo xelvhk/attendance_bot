@@ -13,9 +13,12 @@ def start_record():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         arrival_time TEXT,
-        departure_time TEXT
+        departure_time TEXT,
+        status TEXT DEFAULT NULL,
+        custom_duration_minutes INTEGER DEFAULT NULL
         )
     ''')
+
     conn.commit()
     conn.close()
 
@@ -49,62 +52,123 @@ def record_departure(user_id):
     conn.close()
 
 # Функция для получения статистики за последние N дней
-def get_stats(user_id, days):
-    conn = sqlite3.connect('/data/attendance.db')
+def get_stats(user_id, mode):
+    now = datetime.now()
+    today = now.date()
+
+    if mode == "week":
+        start = today - timedelta(days=today.weekday())  # понедельник
+    elif mode == "month":
+        start = today.replace(day=1)  # первое число месяца
+    else:
+        raise ValueError("mode must be 'week' or 'month'")
+
+    conn = sqlite3.connect("/data/attendance.db")
     cursor = conn.cursor()
 
-    # Рассчитываем дату, начиная с которой нужно брать данные
-    start_date = (datetime.now(SPB) - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
-
-    # SQL-запрос для получения записей за последние N дней
-    cursor.execute('''
-        SELECT arrival_time, departure_time 
+    cursor.execute("""
+        SELECT arrival_time, departure_time, status, custom_duration_minutes
         FROM attendance
-        WHERE user_id = ? AND arrival_time >= ?
-        ORDER BY arrival_time
-    ''', (user_id, start_date))
+        WHERE user_id = ?
+        AND DATE(COALESCE(arrival_time, departure_time)) >= ?
+        ORDER BY COALESCE(arrival_time, departure_time)
+    """, (user_id, start.isoformat()))
 
-    records = cursor.fetchall()
+    data = cursor.fetchall()
     conn.close()
-
-    return records
+    return data
 
 
 # Функция для форматирования статистики с расчетом разницы во времени
-def format_stats(records):
-    if not records:
-        return "Записей за указанный период нет."
+def format_stats(data):
+    from datetime import datetime, timedelta
+    from collections import OrderedDict
 
-    response = "Статистика за указанный период:\n"
-    for arrival, departure in records:
-        # Парсим время прихода и ухода из базы данных
-        arrival_time = datetime.strptime(arrival, '%Y-%m-%d %H:%M:%S')
-        
-        if departure:
-            departure_time = datetime.strptime(departure, '%Y-%m-%d %H:%M:%S')
-            # Рассчитываем разницу во времени
-            work_duration = departure_time - arrival_time
-            hours, remainder = divmod(work_duration.total_seconds(), 3600)
-            minutes = remainder // 60
-            work_duration_str = f"{int(hours)} ч. {int(minutes)} мин."
-        else:
-            work_duration_str = 'Уход не зафиксирован'
+    SPB = timedelta(hours=3)
+    result = ""
+    total_time = timedelta()
+    days_counted = set()
 
-        # Добавляем дату и рабочее время в ответ
-        response += f"Дата: {arrival_time.strftime('%Y-%m-%d')}, Время на работе: {work_duration_str}\n"
+    records_by_day = OrderedDict()
 
-    return response
+    emoji_map = {
+        'Отпуск': '🏖',
+        'Свой счёт': '💸',
+        'УВЦ': '🛑',
+        'УВС': '⏳',
+        'короткий': '⏳'
+    }
+
+    for arrival_str, departure_str, status, custom_minutes in data:
+        try:
+            if arrival_str:
+                day = (datetime.fromisoformat(arrival_str) + SPB).date()
+            elif departure_str:
+                day = (datetime.fromisoformat(departure_str) + SPB).date()
+            else:
+                continue
+        except:
+            continue
+
+        # 🏷 Статусные записи
+        if status in emoji_map:
+            display = f"{emoji_map[status]} {status}"
+            duration = timedelta(minutes=custom_minutes) if custom_minutes else None
+            records_by_day[day] = (display, duration)
+            if duration:
+                total_time += duration
+                days_counted.add(day)
+            continue
+
+        # 🕒 Вручную с duration
+        if custom_minutes:
+            duration = timedelta(minutes=int(custom_minutes))
+            display = f"{emoji_map.get(status, '⏳')} {duration} (вручную)"
+            records_by_day[day] = (display, duration)
+            total_time += duration
+            days_counted.add(day)
+            continue
+
+        # ✅ Стандартный приход/уход
+        if arrival_str and departure_str:
+            try:
+                arrival = datetime.fromisoformat(arrival_str) + SPB
+                departure = datetime.fromisoformat(departure_str) + SPB
+                duration = departure - arrival
+                records_by_day[day] = (str(duration), duration)
+                total_time += duration
+                days_counted.add(day)
+            except:
+                continue
+
+    for day, (display, duration) in records_by_day.items():
+        result += f"{day.strftime('%d.%m.%Y')}: {display}\n"
+
+    expected_time = timedelta(hours=8, minutes=30) * len(days_counted)
+    delta = total_time - expected_time
+
+    result += f"\n<b>Всего: {total_time} / Ожидалось: {expected_time}</b>\n"
+    if delta.total_seconds() > 0:
+        result += f"✅ Переработка: {delta}\n"
+    elif delta.total_seconds() < 0:
+        result += f"⚠️ Недоработка: {-delta}\n"
+    else:
+        result += "✅ Всё точно по плану!\n"
+
+    return result
 
 # Функция для записи 8.5 часов рабочего дня в базу данных
 def record_manual_hours(user_id):
     conn = sqlite3.connect('/data/attendance.db')
     cursor = conn.cursor()
-
     # Текущее время для прихода
     arrival_time = datetime.now(SPB)
     # Рассчитываем фиксированное время ухода (через 8.5 часов после прихода)
     departure_time = arrival_time + timedelta(hours=8, minutes=30)
-
+    cursor.execute("""
+        DELETE FROM attendance
+        WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+        """, (user_id, arrival_time.date()))
     # Записываем в базу данных с фиксированными 8.5 часами
     cursor.execute('''
         INSERT INTO attendance (user_id, arrival_time, departure_time)
@@ -201,4 +265,3 @@ def calculate_monthly_balance(user_id):
         return f"Недоработка в этом месяце: {abs(hours)} часов {abs(minutes)} минут"
     else:
         return "Все отработано в точности по графику!"
-    

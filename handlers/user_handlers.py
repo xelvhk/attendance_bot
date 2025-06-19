@@ -7,7 +7,7 @@ import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
 from services.services import record_arrival, record_departure, start_record, get_stats, format_stats, record_manual_hours, get_random_sticker, add_manual_entry, calculate_monthly_balance
-from datetime import timedelta
+from datetime import timedelta, timezone
 from collections import defaultdict
 router = Router()
 bot = Bot
@@ -51,7 +51,7 @@ async def process_start_command(message: Message):
 async def process_help_command(message: Message):
     await message.answer(text=LEXICON_RU['/help'])
 
-# Обработчик нажатий на кнопки
+# Обработчик прихода
 @router.message(F.text.in_([LEXICON_RU['answers']['tut']]))
 async def arrived(message: Message):
     user_id = message.from_user.id
@@ -59,6 +59,7 @@ async def arrived(message: Message):
     await message.reply("Отметили время прихода!")
     await message.reply_sticker(get_random_sticker(STICKER_ARRIVED))
 
+# Обработчик ухода
 @router.message(F.text.in_([LEXICON_RU['answers']['netut']]))
 async def departed(message: Message):
     user_id = message.from_user.id
@@ -76,48 +77,301 @@ async def manual_hours(message: Message):
 
 # Обработчик нажатия на кнопку "УВЦ"
 @router.message(F.text.in_([LEXICON_RU['answers']['uvc']]))
-async def manual_hours(message: Message):
-    await message.reply("Целый день без работы, ух!")
+async def full_leave(message: Message):
+    user_id = message.from_user.id
+    now = datetime.now(timezone(timedelta(hours=3)))
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM attendance
+    WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+    """, (user_id, now.date()))
+
+    cursor.execute("""
+    INSERT INTO attendance (user_id, status, arrival_time)
+    VALUES (?, ?, ?)
+    """, (user_id, 'УВЦ', now.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer("🟢 Увольнительная на день сохранена. Целый день без работы, ух!")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
 
 # Обработчик нажатия на кнопку "УВC"
-@router.message(F.text.in_([LEXICON_RU['answers']['uvs']]))
-async def manual_hours(message: Message):
-    await message.reply("Расскажи, сколько часов тебя не будет")
+@router.message(lambda message: message.text.lower().startswith("увс"))
+async def short_leave(message: Message):
+    user_id = message.from_user.id
+    now = datetime.now(timezone(timedelta(hours=3)))
+
+    try:
+        parts = message.text.strip().split()
+        hours = float(parts[1])  # например, "УВС 2"
+        duration = int(hours * 60)
+    except:
+        await message.answer("Укажи сколько сегодня работал с увольнительной: например, 'УВС 6'")
+        return
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM attendance
+    WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+    """, (user_id, now.date()))
+
+    cursor.execute("""
+    INSERT INTO attendance (user_id, status, custom_duration_minutes, arrival_time)
+    VALUES (?, ?, ?, ?)
+    """, (user_id, 'УВС', duration, now.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(f"🟠 Теперь отрабатывать {8.5-hours} ч.")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
+
 
 # Обработчик нажатия на кнопку "За свой счёт"
 @router.message(F.text.in_([LEXICON_RU['answers']['one_day']]))
-async def manual_hours(message: Message):
-    await message.reply("Минус зарплата")
+async def pay_day(message: Message):
+    user_id = message.from_user.id
+    now = datetime.now(timezone(timedelta(hours=3)))
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM attendance
+    WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+    """, (user_id, now.date()))
+
+    cursor.execute("""
+    INSERT INTO attendance (user_id, status, arrival_time)
+    VALUES (?, ?, ?)
+    """, (user_id, 'Свой счёт', now.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer("Минус зарплата :(")
+    await message.reply_sticker(get_random_sticker(STICKER_MK))
+
+# Обработчик нажатия на кнопку "Укороченный"
+@router.message(lambda message: message.text.lower().startswith("укороченный"))
+async def short_day(message: Message):
+    user_id = message.from_user.id
+    now = datetime.now(timezone(timedelta(hours=3)))
+
+    try:
+        parts = message.text.strip().split()
+        hours = float(parts[1])  # например, "укороченный 2"
+        duration = int(hours * 60)
+    except:
+        await message.answer("Укажи сколько часов в итоге сегодня работаешь: например, 'укороченный 7'")
+        return
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM attendance
+    WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+    """, (user_id, now.date()))
+
+    cursor.execute("""
+    INSERT INTO attendance (user_id, status, custom_duration_minutes, arrival_time)
+    VALUES (?, ?, ?, ?)
+    """, (user_id, 'короткий', duration, now.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(f"🟢 Укороченный день сохранён.")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
 
-# Обработчик нажатия на кнопку "Короткий день"
-@router.message(F.text.in_([LEXICON_RU['answers']['short_day']]))
-async def manual_hours(message: Message):
-    await message.reply("Сколько часов сегодня не работаем?")
-    await message.reply_sticker(get_random_sticker(STICKER_MK)) 
 
 # Обработчик нажатия на кнопку "Отпуск"
 @router.message(F.text.in_([LEXICON_RU['answers']['holidays']]))
-async def manual_hours(message: Message):
-    await message.reply("Ура! Отпуск!")
+async def holiday(message: Message):
+    user_id = message.from_user.id
+    now = datetime.now(timezone(timedelta(hours=3)))
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM attendance
+    WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?
+    """, (user_id, now.date()))
+
+    cursor.execute("""
+    INSERT INTO attendance (user_id, status, arrival_time)
+    VALUES (?, ?, ?)
+    """, (user_id, 'Отпуск', now.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer("Ура! Отпуск!")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
+
 
 @router.message(F.text.in_([LEXICON_RU['week']]))
 async def week_stats(message: Message):
     user_id = message.from_user.id
-    records = get_stats(user_id, 7)
-    response = format_stats(records)
-    await message.reply(response)
+
+    today = datetime.now(timezone(SPB))
+    start_of_week = today - timedelta(days=today.weekday())  # Понедельник
+    end_of_week = start_of_week + timedelta(days=4)          # Пятница
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT arrival_time, departure_time, status, custom_duration_minutes
+        FROM attendance
+        WHERE user_id = ?
+        AND DATE(COALESCE(arrival_time, departure_time)) BETWEEN ? AND ?
+        ORDER BY COALESCE(arrival_time, departure_time)
+    """, (user_id, start_of_week.date(), end_of_week.date()))
+    data = cursor.fetchall()
+    conn.close()
+
+    if not data:
+        await message.answer("Нет данных за эту неделю.")
+        return
+
+    result = "<b>📊 Рабочая неделя:</b>\n"
+    total_work = timedelta()
+    total_expected = timedelta()
+
+    for arrival_str, departure_str, status, custom_duration in data:
+        try:
+            date = datetime.fromisoformat(arrival_str or departure_str) + SPB if arrival_str or departure_str else today
+            day_str = date.strftime('%d.%m.%Y')
+
+            if status in ['Отпуск', 'Свой счёт', 'УВЦ']:
+                result += f"{day_str}: {status}\n"
+                continue
+
+            if status == 'короткий' and custom_duration:
+                worked = timedelta(minutes=custom_duration)
+                expected = worked
+                total_work += worked
+                total_expected += expected
+                result += f"{day_str}: {str(worked)} (короткий)\n"
+                continue
+
+            if status == 'УВС' and custom_duration:
+                # Отработал меньше обычного
+                worked = timedelta(minutes=custom_duration)
+                expected = timedelta(hours=8, minutes=30)
+                total_work += worked
+                total_expected += expected
+                result += f"{day_str}: {str(worked)} (УВС)\n"
+                continue
+
+            if arrival_str and departure_str:
+                arrival = datetime.fromisoformat(arrival_str) + SPB
+                departure = datetime.fromisoformat(departure_str) + SPB
+                worked = departure - arrival
+                expected = timedelta(hours=8, minutes=30)
+                total_work += worked
+                total_expected += expected
+                result += f"{arrival.date().strftime('%d.%m.%Y')}: {str(worked)}\n"
+
+        except Exception as e:
+            print(f"Ошибка при обработке: {e}")
+            continue
+
+    delta = total_work - total_expected
+    if delta.total_seconds() > 0:
+        result += f"\n<b>✅ Переработка за неделю: {str(delta)}</b>"
+    elif delta.total_seconds() == 0:
+        result += "\n<b>✅ Всё чётко</b>"
+    else:
+        result += f"\n<b>⚠️ Недоработка: {str(-delta)}</b>"
+
+    await message.answer(result, parse_mode='HTML')
 
 # Обработчик нажатия на кнопку "Статистика за месяц"
 @router.message(F.text.in_([LEXICON_RU['month']]))
 async def month_stats(message: Message):
     user_id = message.from_user.id
-    records = get_stats(user_id, 30)
-    response = format_stats(records)
-    await message.reply(response)
+
+    today = datetime.now(timezone(SPB))
+    start_of_month = today.replace(day=1)
+
+    conn = sqlite3.connect("/data/attendance.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT arrival_time, departure_time, status, custom_duration_minutes
+        FROM attendance
+        WHERE user_id = ?
+        AND DATE(COALESCE(arrival_time, departure_time)) >= ?
+        ORDER BY COALESCE(arrival_time, departure_time)
+    """, (user_id, start_of_month.date()))
+    data = cursor.fetchall()
+    conn.close()
+
+    if not data:
+        await message.answer("Нет данных за этот месяц.")
+        return
+
+    result = f"<b>📆 {today.strftime('%B %Y')}</b>\n"
+    total_work = timedelta()
+    total_expected = timedelta()
+
+    for arrival_str, departure_str, status, custom_duration in data:
+        try:
+            date = datetime.fromisoformat(arrival_str or departure_str) + SPB if arrival_str or departure_str else today
+            day_str = date.strftime('%d.%m.%Y')
+
+            if status in ['Отпуск', 'Свой счёт', 'УВЦ']:
+                result += f"{day_str}: {status}\n"
+                continue
+
+            if status == 'короткий' and custom_duration:
+                worked = timedelta(minutes=custom_duration)
+                expected = worked  # день укорочен, и отработано столько, сколько надо
+                total_work += worked
+                total_expected += expected
+                result += f"{day_str}: {str(worked)} (короткий)\n"
+                continue
+
+            if status == 'УВС' and custom_duration:
+                worked = timedelta(minutes=custom_duration)
+                expected = timedelta(hours=8, minutes=30)  # норма остаётся прежней
+                total_work += worked
+                total_expected += expected
+                result += f"{day_str}: {str(worked)} (УВС)\n"
+                continue
+
+            if arrival_str and departure_str:
+                arrival = datetime.fromisoformat(arrival_str) + SPB
+                departure = datetime.fromisoformat(departure_str) + SPB
+                worked = departure - arrival
+                expected = timedelta(hours=8, minutes=30)
+                total_work += worked
+                total_expected += expected
+                result += f"{arrival.date().strftime('%d.%m.%Y')}: {str(worked)}\n"
+
+        except Exception as e:
+            print(f"Ошибка в месяце: {e}")
+            continue
+
+    delta = total_work - total_expected
+    if delta.total_seconds() > 0:
+        result += f"\n<b>✅ Переработка: {str(delta)}</b>"
+    elif delta.total_seconds() == 0:
+        result += "\n<b>✅ Всё чётко</b>"
+    else:
+        result += f"\n<b>⚠️ Недоработка: {str(-delta)}</b>"
+
+    await message.answer(result.strip(), parse_mode='HTML')
 
 # Обработчик для КНОПОЧКИ
 @router.message(F.text.in_([LEXICON_RU['knop']]))
@@ -156,12 +410,11 @@ async def show_full_statistics(message: Message):
 
     conn = sqlite3.connect("/data/attendance.db")
     cursor = conn.cursor()
-
     cursor.execute("""
-        SELECT arrival_time, departure_time
+        SELECT arrival_time, departure_time, status, custom_duration_minutes
         FROM attendance
         WHERE user_id = ?
-        ORDER BY arrival_time
+        ORDER BY COALESCE(arrival_time, departure_time)
     """, (user_id,))
     data = cursor.fetchall()
     conn.close()
@@ -172,41 +425,63 @@ async def show_full_statistics(message: Message):
 
     monthly_data = defaultdict(list)
 
-    for arrival_str, departure_str in data:
-        if arrival_str is None or departure_str is None:
-            continue #пропускаем неполные записи
+    for arrival_str, departure_str, status, custom_duration in data:
         try:
-            # Преобразуем строки в datetime с учетом UTC+3
-            arrival = datetime.fromisoformat(arrival_str) + SPB
-            departure = datetime.fromisoformat(departure_str) + SPB
+            if status in ['Отпуск', 'Свой счёт', 'УВЦ']:
+                date = datetime.fromisoformat(arrival_str or departure_str) + SPB if arrival_str or departure_str else datetime.now()
+                month_key = date.strftime("%B %Y")
+                monthly_data[month_key].append((date.date(), status, None, None))
+                continue
+
+            if status == 'короткий' and custom_duration:
+                date = datetime.fromisoformat(arrival_str or departure_str) + SPB
+                worked = timedelta(minutes=custom_duration)
+                expected = worked  # норма тоже уменьшается
+                month_key = date.strftime("%B %Y")
+                monthly_data[month_key].append((date.date(), None, worked, expected))
+                continue
+
+            if status == 'УВС' and custom_duration:
+                date = datetime.fromisoformat(arrival_str or departure_str) + SPB
+                worked = timedelta(minutes=custom_duration)
+                expected = timedelta(hours=8, minutes=30)  # норма не меняется
+                month_key = date.strftime("%B %Y")
+                monthly_data[month_key].append((date.date(), None, worked, expected))
+                continue
+
+            # Обычный рабочий день
+            if arrival_str and departure_str:
+                arrival = datetime.fromisoformat(arrival_str) + SPB
+                departure = datetime.fromisoformat(departure_str) + SPB
+                worked = departure - arrival
+                expected = timedelta(hours=8, minutes=30)
+                month_key = arrival.strftime("%B %Y")
+                monthly_data[month_key].append((arrival.date(), None, worked, expected))
+
         except Exception as e:
-            print(f"Ошибка при обработке строки: {e}, потому что день ещё не закрыт")
+            print(f"Ошибка при обработке записи: {e}")
             continue
-        month_key = arrival.strftime("%B %Y")
-        worked_time = departure - arrival
-        monthly_data[month_key].append((arrival.date(), worked_time))
 
-    result = ""
+    # Разделённая отправка по месяцам
     for month, records in monthly_data.items():
-        result += f"\n<b>{month}</b>\n"
-        total_time = timedelta()
-        days_set = set()
+        result = f"<b>{month}</b>\n"
+        total_work = timedelta()
+        total_expected = timedelta()
 
-        for day, worked in records:
-            result += f"{day.strftime('%d.%m.%Y')}: {str(worked)}\n"
-            total_time += worked
-            days_set.add(day)
+        for day, status, worked, expected in records:
+            if status:  # Статусный день
+                result += f"{day.strftime('%d.%m.%Y')}: {status}\n"
+            elif worked is not None:
+                result += f"{day.strftime('%d.%m.%Y')}: {str(worked)}\n"
+                total_work += worked
+                total_expected += expected
 
-        expected_time = timedelta(hours=8, minutes=30) * len(days_set)
-        delta = total_time - expected_time
-
+        delta = total_work - total_expected
         if delta.total_seconds() > 0:
-            diff_str = f"✅ Переработка: {str(delta)}"
+            result += f"<b>✅ Переработка: {str(delta)}</b>\n"
         elif delta.total_seconds() == 0:
-            diff_str = f"✅ Всё нормально"
+            result += f"<b>✅ Всё отработано точно</b>\n"
         else:
-            diff_str = f"⚠️ Недоработка: {str(-delta)}"
+            result += f"<b>⚠️ Недоработка: {str(-delta)}</b>\n"
 
-        result += f"<b>Всего: {str(total_time)} — {diff_str}</b>\n"
-
-    await message.answer(result, parse_mode='HTML')
+        await message.answer(result.strip(), parse_mode='HTML')
