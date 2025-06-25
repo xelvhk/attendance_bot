@@ -2,7 +2,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from lexicon.lexicon_ru import LEXICON_RU
 
 
-# Создаем кнопки клавиатуры
+# make buttons great again
 yatut_button_1 = KeyboardButton(text=LEXICON_RU['answers']['tut'])
 yatut_button_2 = KeyboardButton(text=LEXICON_RU['answers']['netut'])
 yatut_button_3 = KeyboardButton(text=LEXICON_RU['answers']['mk'])
@@ -17,7 +17,7 @@ yatut_button_11 = KeyboardButton(text=LEXICON_RU['week'])
 yatut_button_12 = KeyboardButton(text=LEXICON_RU['month'])
 yatut_button_13 = KeyboardButton(text=LEXICON_RU['all_records'])
 
-# Создаем клавиатуру функций
+# make keyboard great again
 yatut_kb = ReplyKeyboardMarkup(
     keyboard=[[yatut_button_1],
               [yatut_button_2],

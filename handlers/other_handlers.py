@@ -5,7 +5,7 @@ from lexicon.lexicon_ru import LEXICON_RU
 router = Router()
 
 
-# Хэндлер для сообщений, которые не попали в другие хэндлеры
+# handler for non-typical requests
 @router.message()
 async def send_answer(message: Message):
     await message.answer(text=LEXICON_RU['other_answer'])
