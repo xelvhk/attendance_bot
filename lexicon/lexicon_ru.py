@@ -20,5 +20,6 @@ LEXICON_RU: dict[str, str] = {
     'knop':'Кнопочка',
     'print':'А если забыл нажать?',
     'check_time':'Перерабатываешь?',
-    'all_records':'Вся статистика'
+    'all_records':'Вся статистика',
+    'export_csv':'Экспорт CSV'
 }

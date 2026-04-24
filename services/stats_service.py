@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import List, Dict, Tuple
 from collections import defaultdict
+import csv
+import io
 
 from .attendance_service import AttendanceRecord
 from .config_services import SPB, STATUS_EMOJIS, WORKDAY_DURATION_MINUTES
@@ -187,3 +189,38 @@ class StatsService:
             return f"Недоработка в этом месяце: {hours} часов {minutes} минут"
         else:
             return "Все отработано в точности по графику!"
+
+    @staticmethod
+    def export_records_to_csv(records: List[AttendanceRecord]) -> str:
+        """Export attendance records to CSV string."""
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "date",
+                "arrival_time",
+                "departure_time",
+                "status",
+                "custom_duration_minutes",
+                "worked_duration",
+                "expected_duration",
+            ]
+        )
+
+        for record in records:
+            worked, expected = StatsService.calculate_work_duration(record)
+            writer.writerow(
+                [
+                    record.date.strftime("%Y-%m-%d"),
+                    record.arrival_time or "",
+                    record.departure_time or "",
+                    record.status or "",
+                    record.custom_duration_minutes
+                    if record.custom_duration_minutes is not None
+                    else "",
+                    StatsService.format_duration(worked),
+                    StatsService.format_duration(expected),
+                ]
+            )
+
+        return output.getvalue()

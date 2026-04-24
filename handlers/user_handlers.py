@@ -1,6 +1,6 @@
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import BufferedInputFile, Message
 from datetime import datetime, timedelta, timezone
 import re
 from keyboards.keyboards import yatut_kb
@@ -206,3 +206,20 @@ async def show_full_statistics(message: Message):
     
     for result in all_stats:
         await message.answer(result, parse_mode='HTML')
+
+
+@router.message(F.text.in_([LEXICON_RU['export_csv']]))
+async def export_stats_csv(message: Message):
+    user_id = message.from_user.id
+    records = AttendanceService.get_all_records(user_id)
+
+    if not records:
+        await message.answer("Нет данных для экспорта.")
+        return
+
+    csv_content = StatsService.export_records_to_csv(records)
+    file_bytes = csv_content.encode("utf-8")
+    filename = f"attendance_{user_id}.csv"
+    csv_file = BufferedInputFile(file=file_bytes, filename=filename)
+
+    await message.answer_document(csv_file, caption="Экспорт статистики в CSV готов.")

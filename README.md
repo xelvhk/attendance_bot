@@ -43,7 +43,7 @@ BOT_TOKEN=your_telegram_bot_token
 - Suggested files: `start.png`, `week-stats.png`, `month-stats.png`
 
 ## Roadmap
-- [ ] Export monthly report to CSV
+- [x] Export monthly/all records to CSV (via `Экспорт CSV` button)
 - [ ] Add per-user timezone setting
 - [ ] Add simple admin command for data backup
 - [ ] Add pytest tests for `services/stats_service.py`
