@@ -35,18 +35,20 @@ BOT_TOKEN=your_telegram_bot_token
 - `main.py`: app bootstrap, bot/dispatcher startup
 - `handlers/`: Telegram commands and message handlers
 - `services/`: domain logic (attendance, stats, db)
+- `services/user_timezone_service.py`: per-user timezone storage and parsing
 - `config_data/`: config loading from env
 - `keyboards/`, `lexicon/`: UI and localized texts
 
 ## Demo / Screenshots
 - Demo chat flow: add screenshots to `docs/screenshots/` (placeholder)
 - Suggested files: `start.png`, `week-stats.png`, `month-stats.png`
+- Timezone setup flow: `/tz +3` or `/tz UTC+03:00`
 
 ## Roadmap
 - [x] Export monthly/all records to CSV (via `Экспорт CSV` button)
-- [ ] Add per-user timezone setting
+- [x] Add per-user timezone setting (`/tz +3`, `/tz UTC+03:00`)
 - [ ] Add simple admin command for data backup
-- [ ] Add pytest tests for `services/stats_service.py`
+- [x] Add unit tests for `services/stats_service.py`
 
 ## CI
 Minimal CI is configured in `.github/workflows/ci.yml`:

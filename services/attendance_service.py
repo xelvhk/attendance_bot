@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 
@@ -39,27 +39,27 @@ class AttendanceService:
         ''')
     
     @staticmethod
-    def record_arrival(user_id: int):
+    def record_arrival(user_id: int, user_tz: tzinfo = SPB):
         """Record user arrival time."""
-        now = datetime.now(SPB).strftime('%Y-%m-%d %H:%M:%S')
+        now = datetime.now(user_tz).strftime('%Y-%m-%d %H:%M:%S')
         execute_query(
             'INSERT INTO attendance (user_id, arrival_time) VALUES (?, ?)',
             (user_id, now)
         )
     
     @staticmethod
-    def record_departure(user_id: int):
+    def record_departure(user_id: int, user_tz: tzinfo = SPB):
         """Record user departure time."""
-        now = datetime.now(SPB).strftime('%Y-%m-%d %H:%M:%S')
+        now = datetime.now(user_tz).strftime('%Y-%m-%d %H:%M:%S')
         execute_query(
             'UPDATE attendance SET departure_time = ? WHERE user_id = ? AND departure_time IS NULL',
             (now, user_id)
         )
     
     @staticmethod
-    def clear_today_records(user_id: int):
+    def clear_today_records(user_id: int, user_tz: tzinfo = SPB):
         """Clear all records for today for a specific user."""
-        today = datetime.now(SPB).date()
+        today = datetime.now(user_tz).date()
         execute_query(
             'DELETE FROM attendance WHERE user_id = ? AND DATE(COALESCE(arrival_time, departure_time)) = ?',
             (user_id, today)
@@ -74,10 +74,10 @@ class AttendanceService:
         )
     
     @staticmethod
-    def add_status_record(user_id: int, status: str, custom_duration: Optional[int] = None):
+    def add_status_record(user_id: int, status: str, custom_duration: Optional[int] = None, user_tz: tzinfo = SPB):
         """Add a status-based record (vacation, leave, etc.)."""
-        AttendanceService.clear_today_records(user_id)
-        now = datetime.now(SPB).isoformat()
+        AttendanceService.clear_today_records(user_id, user_tz=user_tz)
+        now = datetime.now(user_tz).isoformat()
         
         execute_query(
             'INSERT INTO attendance (user_id, status, custom_duration_minutes, arrival_time) VALUES (?, ?, ?, ?)',
@@ -85,10 +85,10 @@ class AttendanceService:
         )
     
     @staticmethod
-    def add_manual_complete_day(user_id: int):
+    def add_manual_complete_day(user_id: int, user_tz: tzinfo = SPB):
         """Add a complete 8.5-hour work day record."""
-        AttendanceService.clear_today_records(user_id)
-        arrival = datetime.now(SPB)
+        AttendanceService.clear_today_records(user_id, user_tz=user_tz)
+        arrival = datetime.now(user_tz)
         departure = arrival + timedelta(hours=8, minutes=30)
         
         execute_query(

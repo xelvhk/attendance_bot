@@ -21,5 +21,6 @@ LEXICON_RU: dict[str, str] = {
     'print':'А если забыл нажать?',
     'check_time':'Перерабатываешь?',
     'all_records':'Вся статистика',
-    'export_csv':'Экспорт CSV'
+    'export_csv':'Экспорт CSV',
+    'timezone':'Часовой пояс'
 }

@@ -1,13 +1,14 @@
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BufferedInputFile, Message
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import re
 from keyboards.keyboards import yatut_kb
 from lexicon.lexicon_ru import LEXICON_RU
 from services.attendance_service import AttendanceService
 from services.stats_service import StatsService
-from services.config_services import SPB, WORK_STATUSES
+from services.config_services import WORK_STATUSES
+from services.user_timezone_service import UserTimezoneService
 from services.util import get_random_sticker
 
 # NOTE: All comments are now in english not russian :(
@@ -54,7 +55,8 @@ async def process_help_command(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['tut']]))
 async def arrived(message: Message):
     user_id = message.from_user.id
-    AttendanceService.record_arrival(user_id)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.record_arrival(user_id, user_tz=user_tz)
     await message.reply("Отметили время прихода!")
     await message.reply_sticker(get_random_sticker(STICKER_ARRIVED))
 
@@ -62,7 +64,8 @@ async def arrived(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['netut']]))
 async def departed(message: Message):
     user_id = message.from_user.id
-    AttendanceService.record_departure(user_id)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.record_departure(user_id, user_tz=user_tz)
     await message.reply("Отметили время ухода!")
     await message.reply_sticker(get_random_sticker(STICKER_DEPARTED))
 
@@ -70,7 +73,8 @@ async def departed(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['mk']]))
 async def manual_hours(message: Message):
     user_id = message.from_user.id
-    AttendanceService.add_manual_complete_day(user_id)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_manual_complete_day(user_id, user_tz=user_tz)
     await message.reply("Записаны фиксированные 8.5 часов рабочего дня.")
     await message.reply_sticker(get_random_sticker(STICKER_MK))
 
@@ -78,7 +82,8 @@ async def manual_hours(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['uvc']]))
 async def full_leave(message: Message):
     user_id = message.from_user.id
-    AttendanceService.add_status_record(user_id, WORK_STATUSES['FULL_LEAVE'])
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_status_record(user_id, WORK_STATUSES['FULL_LEAVE'], user_tz=user_tz)
 
     await message.answer("🟢 Увольнительная на день сохранена. Целый день без работы, ух!")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
@@ -96,7 +101,8 @@ async def short_leave(message: Message):
         await message.answer("Укажи сколько сегодня работал с увольнительной: например, 'УВС 6'")
         return
 
-    AttendanceService.add_status_record(user_id, WORK_STATUSES['PARTIAL_LEAVE'], duration)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_status_record(user_id, WORK_STATUSES['PARTIAL_LEAVE'], duration, user_tz=user_tz)
 
     await message.answer(f"🟠 Теперь отрабатывать {8.5-hours} ч.")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
@@ -107,7 +113,8 @@ async def short_leave(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['one_day']]))
 async def pay_day(message: Message):
     user_id = message.from_user.id
-    AttendanceService.add_status_record(user_id, WORK_STATUSES['PERSONAL_DAY'])
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_status_record(user_id, WORK_STATUSES['PERSONAL_DAY'], user_tz=user_tz)
 
     await message.answer("Минус зарплата :(")
     await message.reply_sticker(get_random_sticker(STICKER_MK))
@@ -125,7 +132,8 @@ async def short_day(message: Message):
         await message.answer("Укажи сколько часов в итоге сегодня работаешь: например, 'укороченный 7'")
         return
 
-    AttendanceService.add_status_record(user_id, WORK_STATUSES['SHORT_DAY'], duration)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_status_record(user_id, WORK_STATUSES['SHORT_DAY'], duration, user_tz=user_tz)
 
     await message.answer(f"🟢 Укороченный день сохранён.")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
@@ -135,7 +143,8 @@ async def short_day(message: Message):
 @router.message(F.text.in_([LEXICON_RU['answers']['holidays']]))
 async def holiday(message: Message):
     user_id = message.from_user.id
-    AttendanceService.add_status_record(user_id, WORK_STATUSES['VACATION'])
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    AttendanceService.add_status_record(user_id, WORK_STATUSES['VACATION'], user_tz=user_tz)
 
     await message.answer("Ура! Отпуск!")
     await message.reply_sticker(get_random_sticker(STICKER_MK)) 
@@ -144,8 +153,8 @@ async def holiday(message: Message):
 @router.message(F.text.in_([LEXICON_RU['week']]))
 async def week_stats(message: Message):
     user_id = message.from_user.id
-
-    today = datetime.now(SPB)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    today = datetime.now(user_tz)
     start_of_week = today - timedelta(days=today.weekday())  # Monday
     end_of_week = start_of_week + timedelta(days=4)          # Friday
 
@@ -157,8 +166,8 @@ async def week_stats(message: Message):
 @router.message(F.text.in_([LEXICON_RU['month']]))
 async def month_stats(message: Message):
     user_id = message.from_user.id
-
-    today = datetime.now(SPB)
+    user_tz = UserTimezoneService.get_user_timezone(user_id)
+    today = datetime.now(user_tz)
     start_of_month = today.replace(day=1)
 
     records = AttendanceService.get_period_records(user_id, start_of_month)
@@ -223,3 +232,39 @@ async def export_stats_csv(message: Message):
     csv_file = BufferedInputFile(file=file_bytes, filename=filename)
 
     await message.answer_document(csv_file, caption="Экспорт статистики в CSV готов.")
+
+
+@router.message(Command(commands='tz'))
+async def configure_timezone(message: Message):
+    user_id = message.from_user.id
+    raw_text = (message.text or "").strip()
+    parts = raw_text.split(maxsplit=1)
+
+    if len(parts) == 1:
+        current_offset = UserTimezoneService.get_user_offset_minutes(user_id)
+        current = UserTimezoneService.format_offset(current_offset)
+        await message.answer(
+            f"Текущий часовой пояс: {current}\n"
+            "Чтобы изменить, отправь команду в формате: /tz +3 или /tz UTC+03:00"
+        )
+        return
+
+    offset_text = parts[1]
+    offset = UserTimezoneService.parse_offset_text(offset_text)
+    if offset is None:
+        await message.answer("Не смог распознать формат. Пример: /tz +3 или /tz UTC+03:00")
+        return
+
+    UserTimezoneService.set_user_timezone(user_id, offset)
+    await message.answer(f"Готово. Установлен часовой пояс: {UserTimezoneService.format_offset(offset)}")
+
+
+@router.message(F.text.in_([LEXICON_RU['timezone']]))
+async def timezone_help(message: Message):
+    user_id = message.from_user.id
+    current_offset = UserTimezoneService.get_user_offset_minutes(user_id)
+    current = UserTimezoneService.format_offset(current_offset)
+    await message.answer(
+        f"Текущий часовой пояс: {current}\n"
+        "Изменить можно командой: /tz +3 или /tz UTC+03:00"
+    )

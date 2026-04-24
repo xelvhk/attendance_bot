@@ -17,6 +17,7 @@ yatut_button_11 = KeyboardButton(text=LEXICON_RU['week'])
 yatut_button_12 = KeyboardButton(text=LEXICON_RU['month'])
 yatut_button_13 = KeyboardButton(text=LEXICON_RU['all_records'])
 yatut_button_14 = KeyboardButton(text=LEXICON_RU['export_csv'])
+yatut_button_15 = KeyboardButton(text=LEXICON_RU['timezone'])
 
 # make keyboard great again
 yatut_kb = ReplyKeyboardMarkup(
@@ -34,6 +35,7 @@ yatut_kb = ReplyKeyboardMarkup(
               [yatut_button_12],
               [yatut_button_13],
               [yatut_button_14],
+              [yatut_button_15],
               ],
     resize_keyboard=True
 )
