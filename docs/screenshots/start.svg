@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="980" viewBox="0 0 540 980">
+  <rect width="540" height="980" fill="#0f172a"/>
+  <rect x="60" y="40" width="420" height="900" rx="32" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <rect x="90" y="90" width="360" height="740" rx="20" fill="#1f2937"/>
+  <text x="270" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#e5e7eb">attendance_bot</text>
+
+  <rect x="110" y="170" width="280" height="110" rx="18" fill="#374151"/>
+  <text x="125" y="202" font-family="Arial, sans-serif" font-size="16" fill="#f9fafb">Привет! Я бот для табеля.</text>
+  <text x="125" y="228" font-family="Arial, sans-serif" font-size="16" fill="#f9fafb">Отмечай приход/уход и</text>
+  <text x="125" y="254" font-family="Arial, sans-serif" font-size="16" fill="#f9fafb">смотри статистику.</text>
+
+  <rect x="150" y="320" width="240" height="54" rx="16" fill="#2563eb"/>
+  <text x="270" y="354" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">А вот и я!</text>
+
+  <rect x="150" y="390" width="240" height="54" rx="16" fill="#ef4444"/>
+  <text x="270" y="424" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">Мои полномочия всё...</text>
+
+  <rect x="150" y="460" width="240" height="54" rx="16" fill="#10b981"/>
+  <text x="270" y="494" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">Статистика за неделю</text>
+
+  <rect x="150" y="530" width="240" height="54" rx="16" fill="#f59e0b"/>
+  <text x="270" y="564" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">Статистика за месяц</text>
+
+  <rect x="150" y="600" width="240" height="54" rx="16" fill="#8b5cf6"/>
+  <text x="270" y="634" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">Экспорт CSV</text>
+
+  <rect x="150" y="670" width="240" height="54" rx="16" fill="#14b8a6"/>
+  <text x="270" y="704" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#ffffff">Часовой пояс</text>
+
+  <text x="270" y="885" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8">Demo mockup</text>
+</svg>

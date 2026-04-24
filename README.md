@@ -40,8 +40,13 @@ BOT_TOKEN=your_telegram_bot_token
 - `keyboards/`, `lexicon/`: UI and localized texts
 
 ## Demo / Screenshots
-- Demo chat flow: add screenshots to `docs/screenshots/` (placeholder)
-- Suggested files: `start.png`, `week-stats.png`, `month-stats.png`
+- Demo chat flow (mockup previews):
+
+![Start flow](docs/screenshots/start.svg)
+![Week stats flow](docs/screenshots/week-stats.svg)
+![Month stats flow](docs/screenshots/month-stats.svg)
+
+- Note: these are UI mockup previews to document bot scenarios.
 - Timezone setup flow: `/tz +3` or `/tz UTC+03:00`
 
 ## Roadmap

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="980" viewBox="0 0 540 980">
+  <rect width="540" height="980" fill="#111827"/>
+  <rect x="60" y="40" width="420" height="900" rx="32" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+  <rect x="90" y="90" width="360" height="740" rx="20" fill="#1f2937"/>
+  <text x="270" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#e5e7eb">Статистика за месяц</text>
+
+  <rect x="110" y="170" width="320" height="360" rx="18" fill="#111827"/>
+  <text x="130" y="206" font-family="Arial, sans-serif" font-size="16" fill="#fcd34d">📆 April 2026</text>
+  <text x="130" y="240" font-family="Arial, sans-serif" font-size="15" fill="#e5e7eb">01.04.2026: 8:30:00</text>
+  <text x="130" y="268" font-family="Arial, sans-serif" font-size="15" fill="#e5e7eb">02.04.2026: ⏳ УВС</text>
+  <text x="130" y="296" font-family="Arial, sans-serif" font-size="15" fill="#e5e7eb">03.04.2026: 🏖 Отпуск</text>
+  <text x="130" y="324" font-family="Arial, sans-serif" font-size="15" fill="#e5e7eb">04.04.2026: 9:10:00</text>
+  <text x="130" y="372" font-family="Arial, sans-serif" font-size="16" fill="#fb7185">⚠️ Недоработка: 1:20:00</text>
+
+  <rect x="120" y="560" width="300" height="64" rx="16" fill="#8b5cf6"/>
+  <text x="270" y="600" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">/tz UTC+03:00</text>
+
+  <rect x="120" y="640" width="300" height="64" rx="16" fill="#10b981"/>
+  <text x="270" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">Готово</text>
+
+  <text x="270" y="885" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#94a3b8">Demo mockup</text>
+</svg>
