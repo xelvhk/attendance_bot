@@ -52,3 +52,10 @@ BOT_TOKEN=your_telegram_bot_token
 Minimal CI is configured in `.github/workflows/ci.yml`:
 - install dependencies
 - run syntax check (`python -m compileall`)
+- run unit tests (`python -m unittest discover -s tests`)
+
+## Error Logging Policy
+- Keep `logging` enabled at `INFO` in production and `DEBUG` only for local troubleshooting.
+- Log startup, command handling, and storage errors with context (`user_id`, handler name).
+- Never log secrets (`BOT_TOKEN`) or full sensitive payloads.
+- For unexpected exceptions in handlers, return a friendly user message and log traceback for diagnostics.
