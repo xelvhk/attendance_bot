@@ -1,9 +1,10 @@
-from datetime import datetime
 import sqlite3
 
-from .config_services import SPB, WORKDAY_DURATION_MINUTES
+from environs import Env
 
-DB_PATH = '/data/attendance.db'
+env = Env()
+env.read_env()
+DB_PATH = env.str('DB_PATH', 'attendance.db')
 
 
 def connect_db():

@@ -16,6 +16,14 @@ class UserTimezoneServiceTests(unittest.TestCase):
         self.assertIsNone(UserTimezoneService.parse_offset_text("UTC+15:00"))
         self.assertIsNone(UserTimezoneService.parse_offset_text("UTC+03:99"))
 
+    def test_parse_offset_accepts_supported_boundaries(self) -> None:
+        self.assertEqual(UserTimezoneService.parse_offset_text("UTC-12:00"), -720)
+        self.assertEqual(UserTimezoneService.parse_offset_text("UTC+14:00"), 840)
+
+    def test_parse_offset_rejects_out_of_range_boundaries(self) -> None:
+        self.assertIsNone(UserTimezoneService.parse_offset_text("UTC-12:30"))
+        self.assertIsNone(UserTimezoneService.parse_offset_text("UTC+14:30"))
+
     def test_format_offset(self) -> None:
         self.assertEqual(UserTimezoneService.format_offset(180), "UTC+03:00")
         self.assertEqual(UserTimezoneService.format_offset(-330), "UTC-05:30")

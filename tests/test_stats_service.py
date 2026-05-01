@@ -41,6 +41,28 @@ class StatsServiceTests(unittest.TestCase):
         self.assertEqual(worked, timedelta(hours=6))
         self.assertEqual(expected, timedelta(hours=8, minutes=30))
 
+    def test_full_leave_creates_full_expected_debt(self) -> None:
+        record = AttendanceRecord(
+            arrival_time=None,
+            departure_time=None,
+            status="УВЦ",
+            custom_duration_minutes=None,
+        )
+        worked, expected = StatsService.calculate_work_duration(record)
+        self.assertEqual(worked, timedelta())
+        self.assertEqual(expected, timedelta(hours=8, minutes=30))
+
+    def test_short_day_uses_custom_duration_as_expected(self) -> None:
+        record = AttendanceRecord(
+            arrival_time=None,
+            departure_time=None,
+            status="короткий",
+            custom_duration_minutes=300,
+        )
+        worked, expected = StatsService.calculate_work_duration(record)
+        self.assertEqual(worked, timedelta(hours=5))
+        self.assertEqual(expected, timedelta(hours=5))
+
     def test_monthly_balance_for_undertime(self) -> None:
         records = [
             AttendanceRecord(
