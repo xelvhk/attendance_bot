@@ -63,7 +63,7 @@ BOT_TOKEN=your_telegram_bot_token
 ## Roadmap
 - [x] Export monthly/all records to CSV (via `Экспорт CSV` button)
 - [x] Add per-user timezone setting (`/tz +3`, `/tz UTC+03:00`)
-- [ ] Add simple admin command for data backup
+- [x] Add simple admin command for data backup (spec: `docs/ADMIN_BACKUP_COMMAND_SPEC.md`)
 - [x] Add unit tests for `services/stats_service.py`
 
 ## CI
